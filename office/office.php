@@ -22,11 +22,12 @@ class plan
 
   public function __construct($input_file = 'in.txt', $output_file = 'out.png')
   {
-    //header('Content-type: image/png');
+    header('Content-type: image/png');
     $this->read_input($input_file);
     $this->plan_workspace();
     $this->write_output($output_file);
     imagepng($this->image);
+    imagedestroy($this->image);
   }
 
   private function read_input($filename)
@@ -35,10 +36,6 @@ class plan
     $fd = @fopen($path, 'r');
     if ($fd) {
       $this->num_workers = trim(fgets($fd));
-
-      // echo '<pre>';
-      //echo $this->num_workers.'<br>';
-      // echo '</pre>';
       fclose($fd);
     } else {
       echo "Не удалось открыть файл: $path";
@@ -59,7 +56,6 @@ class plan
       ++$dop_lines;
     }
     $this->num_rows = $sqrt + $dop_lines;
-    echo $dop_lines;
 
     $this->num_side_lines = (4 * $sqrt) + (2 * $dop_lines);
     $this->num_internal_lines = ((4 * $this->num_workers) - $this->num_side_lines) / 2;
@@ -68,15 +64,15 @@ class plan
     //Параметры изображения
     $width = $height = 1000;
 
-    $this->hx1 = 100;
-    $this->hx2 = 1000 / $this->num_rows - 30;
-    $this->hy1 = 125;
-    $this->hy2 = 125;
+    $this->hx1 = 16;
+    $this->hx2 = 16 + (1000 / ($this->num_rows + 3));
+    $this->hy1 = 10;
+    $this->hy2 = 10;
 
-    $this->vx1 = 100;
-    $this->vx2 = 100;
-    $this->vy1 = 100;
-    $this->vy2 = 1000 / $this->num_rows - 30;
+    $this->vx1 = 10;
+    $this->vx2 = 10;
+    $this->vy1 = 16;
+    $this->vy2 = 16 + (1000 / ($this->num_rows + 3));
 
     $this->image = imagecreate($width, $height);
 
@@ -84,18 +80,20 @@ class plan
     $this->black = imagecolorallocate($this->image, 0, 0, 0);
     imagesetthickness($this->image, 5);
 
-    var_dump($this);
     //рисуем картинку
     $this->draw($sqrt);
   }
 
   private function line_repeat(int $x1, int $y1, int $x2, int $y2,
-   int $repeat)
+   int $repeat, $color = null)
   {
+    if (!$color) {
+      $color = $this->black;
+    }
     for ($i = 0; $i < $repeat; ++$i) {
-      imageline($this->image, $x1, $y1, $x2, $y2, $this->black);
-      $x1 += 1000 / $this->num_rows + 30;
-      $x2 += 1000 / $this->num_rows + 30;
+      imageline($this->image, $x1, $y1, $x2, $y2, $color);
+      $x1 += 1000 / ($this->num_rows + 3) + 12;
+      $x2 += 1000 / ($this->num_rows + 3) + 12;
     }
   }
 
@@ -113,14 +111,16 @@ class plan
         $n1 = $side_length;
       }
       $to_draw -= $n;
+      $offset = (1000 / ($this->num_rows + 3)) + 12;
       //горизонтальные линии
       $this->line_repeat($this->hx1, $this->hy1, $this->hx2, $this->hy2, $n1);
-      $this->hy1 += 150;
-      $this->hy2 += 150;
+      $this->hy1 += $offset;
+      $this->hy2 += $offset;
       //рисуем вертикальные линии
-      $this->line_repeat($this->vx1, $this->vy1, $this->vx2, $this->vy2, $n + 1);
-      $this->vy1 += 150;
-      $this->vy2 += 150;
+      $c = imagecolorallocate($this->image, 200, 200, 200);
+      $this->line_repeat($this->vx1, $this->vy1, $this->vx2, $this->vy2, $n + 1, $c);
+      $this->vy1 += $offset;
+      $this->vy2 += $offset;
     }
     $this->line_repeat($this->hx1, $this->hy1, $this->hx2, $this->hy2, $n);
   }
@@ -130,8 +130,7 @@ class plan
     $path = __DIR__.DIRECTORY_SEPARATOR.$filename;
     $fd = @fopen($path, 'w');
     if ($fd) {
-      fwrite($fd, imagepng($this->image));
-      fclose($fd);
+      imagepng($this->image, $fd);
     } else {
       echo "Не удалось открыть файл: $path";
     }
