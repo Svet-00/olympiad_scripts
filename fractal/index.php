@@ -34,6 +34,7 @@ class fractal
     $this->draw();
     //var_dump($this);
     imagepng($this->img);
+    imagedestroy($this->img);
   }
 
   //функция заполняет свойства объекта входными данными
